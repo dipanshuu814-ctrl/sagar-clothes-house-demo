@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Lead Finder</title>
+<style>
+body{font-family:Inter,system-ui,sans-serif;background:#0b1020;color:#eef2ff;margin:0;padding:24px}
+.wrap{max-width:1000px;margin:auto}.card{background:#151c32;border:1px solid #2b3555;border-radius:18px;padding:20px;margin:16px 0}
+h1{margin:0 0 8px}p{color:#aeb8d4}input,button{padding:12px;border-radius:10px;border:1px solid #394563;background:#0d1427;color:white;margin:5px}
+button{cursor:pointer;background:#635bff;border:0}.muted{color:#8995b5}.row{display:flex;flex-wrap:wrap;gap:6px}.lead{padding:14px 0;border-top:1px solid #2b3555}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="card">
+<h1>🤖 AI Lead Finder</h1>
+<p>Find local businesses and save selected prospects to your Supabase lead database.</p>
+
+<div class="row">
+<input id="city" value="Dehradun" placeholder="City">
+<input id="category" value="clothes" placeholder="Business type">
+<input id="limit" type="number" value="20" min="1" max="50">
+<button onclick="findBusinesses()">Find Businesses</button>
+</div>
+</div>
+
+<div class="card">
+<div id="status">No search yet.</div>
+<div id="results"></div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const SUPABASE_URL="https://nfewbdpohfukwmlhpigi.supabase.co";
+const SUPABASE_ANON_KEY="PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+
+const sb=window.supabase.createClient(
+SUPABASE_URL,
+SUPABASE_ANON_KEY
+);
+
+async function geocode(city){
+const u="https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(city);
+const r=await fetch(u);
+const a=await r.json();
+return a[0];
+}
+
+async function findBusinesses(){
+
+const city=document.getElementById("city").value.trim();
+const category=document.getElementById("category").value.trim();
+const limit=Math.min(50,Math.max(1,+document.getElementById("limit").value||20));
+
+const status=document.getElementById("status");
+const results=document.getElementById("results");
+
+results.innerHTML="";
+status.textContent="Finding businesses...";
+
+try{
+
+const g=await geocode(city);
+
+if(!g) throw new Error("City not found");
+
+const lat=+g.lat;
+const lon=+g.lon;
+const radius=15000;
+
+const q=`[out:json][timeout:25];
+(nwr["shop"](around:${radius},${lat},${lon});
+nwr["amenity"](around:${radius},${lat},${lon}););
+out center tags;`;
+
+const r=await fetch(
+"https://overpass-api.de/api/interpreter",
+{
+method:"POST",
+body:q
+}
+);
+
+const data=await r.json();
+
+const needle=category.toLowerCase();
+
+const rows=data.elements.map(e=>{
+
+const t=e.tags||{};
+const name=t.name||"";
+
+const hay=(
+name+" "+
+(t.shop||"")+" "+
+(t.amenity||"")+" "+
+(t.cuisine||"")
+).toLowerCase();
+
+return {name,hay,t};
+
+}).filter(x=>
+x.name &&
+(!needle || x.hay.includes(needle))
+).slice(0,limit);
+
+if(!rows.length){
+
+status.textContent=
+"No matching businesses found. Try another category.";
+
+return;
+}
+
+status.innerHTML=
+`Found <b>${rows.length}</b> businesses.`;
+
+rows.forEach((x,i)=>{
+
+const t=x.t;
+
+const website=
+t.website||t["contact:website"]||"";
+
+const phone=
+t.phone||t["contact:phone"]||"";
+
+const email=
+t.email||t["contact:email"]||"";
+
+const div=document.createElement("div");
+
+div.className="lead";
+
+div.innerHTML=`
+
+<label>
+<input type="checkbox" data-i="${i}" checked>
+<b>${esc(x.name)}</b>
+</label>
+
+<div class="muted">
+${esc(phone)}
+${esc(email)}
+${website?esc(website):""}
+</div>
+`;
+
+results.appendChild(div);
+
+x.save={
+name:x.name,
+category:t.shop||t.amenity||category,
+city,
+phone,
+email,
+website,
+instagram:t["contact:instagram"]||"",
+website_status:website?"has_website":"unknown",
+lead_status:"new",
+notes:"Discovered via OpenStreetMap"
+};
+
+});
+
+const b=document.createElement("button");
+
+b.textContent=
+"Save Selected Leads to Supabase";
+
+b.onclick=()=>saveRows(rows);
+
+results.appendChild(b);
+
+}catch(e){
+
+status.textContent="Error: "+e.message;
+
+}
+}
+
+async function saveRows(rows){
+
+const checks=[
+...document.querySelectorAll(
+'input[type=checkbox][data-i]:checked'
+)
+].map(x=>+x.dataset.i);
+
+const payload=checks.map(i=>rows[i].save);
+
+if(!payload.length)return;
+
+const {error}=await sb
+.from("Leads")
+.insert(payload);
+
+if(error){
+
+alert("Save failed: "+error.message);
+return;
+
+}
+
+alert(payload.length+" lead(s) saved.");
+
+}
+
+function esc(v){
+
+return String(v??"")
+.replace(/[&<>"']/g,m=>({
+"&":"&amp;",
+"<":"&lt;",
+">":"&gt;",
+'"':"&quot;",
+"'":"&#39;"
+}[m]));
+
+}
+</script>
+
+</body>
+</html>
