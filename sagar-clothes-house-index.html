@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sagar Clothes House — Dehradun</title>
+<meta name="description" content="Sagar Clothes House — a premium preview website for sarees, suits and ready-to-wear fashion in Dehradun.">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+:root{--ink:#211713;--cream:#f8f2e9;--paper:#fffaf4;--maroon:#651d2a;--gold:#c99a4a;--muted:#76655c;--line:#e7d9ca}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--cream);color:var(--ink);font-family:"DM Sans",sans-serif}
+a{text-decoration:none;color:inherit}.nav{position:fixed;z-index:20;top:0;left:0;right:0;padding:18px 5vw;display:flex;justify-content:space-between;align-items:center;background:rgba(248,242,233,.82);backdrop-filter:blur(16px);border-bottom:1px solid rgba(231,217,202,.7)}
+.logo{font-family:"Cormorant Garamond";font-size:27px;font-weight:700;color:var(--maroon);letter-spacing:.5px}.navlinks{display:flex;gap:28px;font-size:13px}.navlinks a:hover{color:var(--maroon)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 20px;border-radius:99px;background:var(--maroon);color:#fff;font-size:13px;font-weight:700;box-shadow:0 10px 25px #651d2a25;transition:.3s}.btn:hover{transform:translateY(-3px);box-shadow:0 15px 30px #651d2a35}
+.hero{min-height:100vh;display:grid;place-items:center;padding:140px 6vw 80px;position:relative;overflow:hidden;background:radial-gradient(circle at 80% 20%,#e9d0aa 0,transparent 28%),linear-gradient(135deg,#f8f2e9,#f2e1d1)}
+.hero:before{content:"";position:absolute;width:520px;height:520px;border:1px solid #c99a4a55;border-radius:50%;right:-120px;top:100px;animation:spin 24s linear infinite}.hero:after{content:"";position:absolute;width:360px;height:360px;border:1px solid #651d2a33;border-radius:50%;right:-35px;top:180px}
+.hero-inner{max-width:1180px;width:100%;display:grid;grid-template-columns:1.05fr .95fr;gap:70px;align-items:center}.eyebrow{text-transform:uppercase;letter-spacing:4px;font-size:11px;color:var(--gold);font-weight:700;margin-bottom:18px}
+h1{font-family:"Cormorant Garamond";font-size:clamp(62px,8vw,112px);line-height:.84;margin:0 0 28px;font-weight:600;color:var(--maroon)}.hero p{max-width:570px;color:var(--muted);font-size:17px;line-height:1.8}.actions{display:flex;gap:14px;flex-wrap:wrap;margin-top:30px}.outline{background:transparent;color:var(--maroon);border:1px solid #651d2a44;box-shadow:none}
+.visual{min-height:570px;position:relative}.fashion-card{position:absolute;inset:35px 25px 25px 45px;background:linear-gradient(145deg,#6b2431,#32171a);border-radius:180px 180px 24px 24px;box-shadow:25px 30px 70px #32171a35;overflow:hidden}.fashion-card:before{content:"";position:absolute;inset:15%;border-radius:50%;background:radial-gradient(circle,#d8b276,#8c4b38 35%,#3b171d 68%);filter:blur(4px);animation:pulse 5s ease-in-out infinite}.fabric{position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 35px,#ffffff0c 36px 39px);transform:translateX(-20px);animation:drift 8s ease-in-out infinite}.badge{position:absolute;right:0;top:0;background:var(--paper);padding:18px 20px;border-radius:18px;box-shadow:0 15px 35px #21171322;font-family:"Cormorant Garamond";font-size:22px;color:var(--maroon)}
+section{padding:110px 6vw}.wrap{max-width:1180px;margin:auto}.section-head{display:flex;justify-content:space-between;gap:30px;align-items:end;margin-bottom:45px}.kicker{color:var(--gold);text-transform:uppercase;letter-spacing:3px;font-size:11px;font-weight:700}.section-head h2{font-family:"Cormorant Garamond";font-size:60px;line-height:.9;margin:10px 0 0;color:var(--maroon)}.section-head p{max-width:430px;color:var(--muted);line-height:1.7}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{background:var(--paper);border:1px solid var(--line);border-radius:24px;padding:30px;min-height:250px;position:relative;overflow:hidden;transition:.4s}.card:hover{transform:translateY(-8px);box-shadow:0 20px 45px #32171a12}.num{font-size:12px;color:var(--gold);font-weight:700}.card h3{font-family:"Cormorant Garamond";font-size:34px;color:var(--maroon);margin:70px 0 10px}.card p{color:var(--muted);line-height:1.65;font-size:14px}
+.products{grid-template-columns:repeat(4,1fr)}.product{padding:0;overflow:hidden}.product-art{height:290px;background:linear-gradient(145deg,#ead7bd,#8a3c42);position:relative}.product:nth-child(2) .product-art{background:linear-gradient(145deg,#ddd4c2,#47303a)}.product:nth-child(3) .product-art{background:linear-gradient(145deg,#f0c98f,#71332e)}.product:nth-child(4) .product-art{background:linear-gradient(145deg,#d9c6bc,#47232d)}.product-art:after{content:"";position:absolute;inset:20%;border-radius:50% 50% 42% 42%;background:linear-gradient(160deg,#ffffff66,#00000015);box-shadow:inset 12px 0 30px #ffffff25}.product-info{padding:20px}.product-info h3{font-family:"Cormorant Garamond";font-size:25px;margin:0 0 6px;color:var(--maroon)}.product-info p{margin:0;color:var(--muted);font-size:13px}
+.story{background:var(--maroon);color:#fff}.story .section-head h2,.story .kicker{color:#f2d49b}.story .section-head p{color:#eadbd2}.storygrid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}.quote{font-family:"Cormorant Garamond";font-size:48px;line-height:1.05}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}.stat{border-top:1px solid #ffffff35;padding-top:18px}.stat strong{font-family:"Cormorant Garamond";font-size:42px;color:#f2d49b}.stat span{display:block;color:#e8d8d1;font-size:12px;margin-top:5px}
+.cta{background:var(--paper);text-align:center}.cta h2{font-family:"Cormorant Garamond";font-size:65px;color:var(--maroon);margin:12px auto 18px}.cta p{max-width:620px;margin:0 auto 30px;color:var(--muted);line-height:1.7}.footer{padding:30px 6vw;background:#1c1110;color:#dbcfc7;display:flex;justify-content:space-between;font-size:12px}.demo{position:fixed;bottom:18px;left:18px;z-index:30;background:#fff8ed;color:var(--maroon);border:1px solid #d7b477;padding:8px 12px;border-radius:99px;font-size:10px;font-weight:700;letter-spacing:1px}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s ease}.reveal.show{opacity:1;transform:none}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{transform:scale(1.08)}}@keyframes drift{50%{transform:translateX(25px)}} 
+@media(max-width:850px){.navlinks{display:none}.hero-inner,.storygrid{grid-template-columns:1fr}.visual{min-height:430px}.fashion-card{inset:20px 10px}.grid,.products{grid-template-columns:1fr 1fr}.section-head{display:block}.section-head p{margin-top:20px}section{padding:80px 5vw}}
+@media(max-width:560px){.hero{padding-top:120px}.visual{min-height:360px}h1{font-size:65px}.grid,.products,.stats{grid-template-columns:1fr}.section-head h2,.cta h2{font-size:48px}.quote{font-size:38px}.footer{display:block}.footer span{display:block;margin-top:8px}}
+</style>
+</head>
+<body>
+<div class="demo">PREVIEW • NOT YET LIVE</div>
+<nav class="nav"><a class="logo" href="#">Sagar Clothes House</a><div class="navlinks"><a href="#collections">Collections</a><a href="#new">New Arrivals</a><a href="#story">Our Story</a><a href="#visit">Visit</a></div><a class="btn" href="#visit">Enquire ↗</a></nav>
+
+<header class="hero">
+<div class="hero-inner">
+<div class="reveal">
+<div class="eyebrow">Dehradun • Indian Fashion</div>
+<h1>Wear Your<br><i>Occasion.</i></h1>
+<p>A refined preview for Sagar Clothes House — bringing sarees, suits and ready-to-wear styles together in one elegant shopping experience.</p>
+<div class="actions"><a class="btn" href="#collections">Explore Collections</a><a class="btn outline" href="#visit">Visit the Store</a></div>
+</div>
+<div class="visual reveal"><div class="fashion-card"><div class="fabric"></div></div><div class="badge">Festive<br>2026</div></div>
+</div>
+</header>
+
+<section id="collections"><div class="wrap">
+<div class="section-head reveal"><div><div class="kicker">Curated for you</div><h2>Collections<br>with character.</h2></div><p>From everyday elegance to celebration-ready looks, browse the categories designed around the way customers actually shop.</p></div>
+<div class="grid">
+<div class="card reveal"><span class="num">01 / WOMEN</span><h3>Sarees</h3><p>Statement drapes, timeless classics and occasion-ready styles.</p></div>
+<div class="card reveal"><span class="num">02 / ETHNIC</span><h3>Suits</h3><p>Elegant suit sets for festive days, workwear and family occasions.</p></div>
+<div class="card reveal"><span class="num">03 / READY TO WEAR</span><h3>Everyday Edit</h3><p>Easy, versatile fashion for everyday wardrobes and last-minute plans.</p></div>
+</div></div></section>
+
+<section id="new"><div class="wrap">
+<div class="section-head reveal"><div><div class="kicker">The edit</div><h2>New arrivals.</h2></div><p>A visual product showcase that can be updated with real stock, prices and photos whenever the store is ready.</p></div>
+<div class="grid products">
+<div class="card product reveal"><div class="product-art"></div><div class="product-info"><h3>Festive Saree</h3><p>Occasion Edit • Enquire for price</p></div></div>
+<div class="card product reveal"><div class="product-art"></div><div class="product-info"><h3>Classic Suit Set</h3><p>Everyday Edit • Enquire for price</p></div></div>
+<div class="card product reveal"><div class="product-art"></div><div class="product-info"><h3>Celebration Look</h3><p>Festive Edit • Enquire for price</p></div></div>
+<div class="card product reveal"><div class="product-art"></div><div class="product-info"><h3>Ready-to-Wear</h3><p>New Season • Enquire for price</p></div></div>
+</div></div></section>
+
+<section class="story" id="story"><div class="wrap storygrid">
+<div class="reveal"><div class="kicker">The experience</div><div class="quote">“A shop visit should feel like finding the right look before you even step into the fitting room.”</div></div>
+<div class="reveal"><p style="color:#eadbd2;line-height:1.8">This preview is designed as a digital storefront: visual first, simple to browse, and built to turn product discovery into a direct enquiry.</p><div class="stats"><div class="stat"><strong>01</strong><span>Visual-first browsing</span></div><div class="stat"><strong>02</strong><span>Direct enquiries</span></div><div class="stat"><strong>03</strong><span>Mobile ready</span></div></div></div>
+</div></section>
+
+<section id="visit" class="cta"><div class="wrap reveal"><div class="kicker">Come by</div><h2>Find your next favourite.</h2><p>Sagar Clothes House • Selaqui / Dehradun. Add the store's verified address, phone number, opening hours and WhatsApp link before launch.</p><a class="btn" href="javascript:void(0)" onclick="alert('WhatsApp number will be connected after the store confirms its contact details.')">Start a WhatsApp Enquiry ↗</a></div></section>
+
+<footer class="footer"><span>© 2026 Sagar Clothes House</span><span>Website preview • Prepared for approval</span></footer>
+<script>
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('show')}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(e=>io.observe(e));
+</script>
+</body>
+</html>
