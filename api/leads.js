@@ -1,122 +1,493 @@
-export default async function handler(req, res) {
-  try {
-    const city = String(req.query.city || "").trim();
-    const category = String(req.query.category || "").trim().toLowerCase();
-    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Lead Finder</title>
 
-    if (!city) {
-      return res.status(400).json({ error: "City is required" });
-    }
+<style>
+body{
+  font-family:system-ui,sans-serif;
+  background:#0b1020;
+  color:#eef2ff;
+  margin:0;
+  padding:24px;
+}
 
-    const geoURL =
-      "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
-      encodeURIComponent(city);
+.wrap{
+  max-width:1000px;
+  margin:auto;
+}
 
-    const geoResponse = await fetch(geoURL, {
-      headers: {
-        "User-Agent": "AI-Lead-Finder/1.0"
-      }
-    });
+.card{
+  background:#151c32;
+  border:1px solid #2b3555;
+  border-radius:18px;
+  padding:20px;
+  margin:16px 0;
+}
 
-    if (!geoResponse.ok) {
-      throw new Error("Location service unavailable");
-    }
+h1{
+  margin:0 0 8px;
+}
 
-    const geo = await geoResponse.json();
+p,.muted{
+  color:#aeb8d4;
+}
 
-    if (!geo.length) {
-      return res.status(404).json({ error: "City not found" });
-    }
+input,button{
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #394563;
+  background:#0d1427;
+  color:white;
+  margin:5px;
+}
 
-    const lat = Number(geo[0].lat);
-    const lon = Number(geo[0].lon);
+button{
+  cursor:pointer;
+  background:#635bff;
+  border:0;
+}
 
-    const query = `
-[out:json][timeout:25];
-(
-  nwr["name"](around:15000,${lat},${lon});
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+.lead{
+  padding:14px 0;
+  border-top:1px solid #2b3555;
+}
+
+.error{
+  color:#ff8d8d;
+}
+
+.success{
+  color:#7ee2a8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+
+<div class="card">
+
+<h1>🤖 AI Lead Finder</h1>
+
+<p>
+Find local businesses and save prospects to your Supabase lead database.
+</p>
+
+<input
+  id="city"
+  value="Dehradun"
+  placeholder="City"
+>
+
+<input
+  id="category"
+  value="clothes"
+  placeholder="Business type"
+>
+
+<input
+  id="limit"
+  type="number"
+  value="20"
+  min="1"
+  max="50"
+>
+
+<button
+  id="findButton"
+  onclick="findBusinesses()"
+>
+Find Businesses
+</button>
+
+</div>
+
+
+<div class="card">
+
+<div id="status">
+No search yet.
+</div>
+
+<div id="results"></div>
+
+</div>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+const SUPABASE_URL =
+"https://nfewbdpohfukwmlhpigi.supabase.co";
+
+/*
+IMPORTANT:
+Keep your existing Supabase PUBLISHABLE/ANON key here.
+Do NOT use a service-role key.
+*/
+const SUPABASE_ANON_KEY =
+"sb_publishable_JDVxhynBMwqe-Fu4mQO4RQ_ZBEC9jss";
+
+const sb =
+window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 );
-out center tags;
+
+
+let currentBusinesses = [];
+
+
+async function findBusinesses(){
+
+  const city =
+    document
+      .getElementById("city")
+      .value
+      .trim();
+
+  const category =
+    document
+      .getElementById("category")
+      .value
+      .trim();
+
+  const limit =
+    Math.min(
+      50,
+      Math.max(
+        1,
+        Number(
+          document
+            .getElementById("limit")
+            .value
+        ) || 20
+      )
+    );
+
+
+  const status =
+    document.getElementById("status");
+
+  const results =
+    document.getElementById("results");
+
+  const findButton =
+    document.getElementById("findButton");
+
+
+  if(!city){
+
+    status.innerHTML =
+      '<span class="error">Please enter a city.</span>';
+
+    return;
+  }
+
+
+  status.textContent =
+    "Finding businesses...";
+
+  results.innerHTML = "";
+
+  findButton.disabled = true;
+
+
+  try{
+
+    const url =
+      "/api/leads?city=" +
+      encodeURIComponent(city) +
+      "&category=" +
+      encodeURIComponent(category) +
+      "&limit=" +
+      encodeURIComponent(limit);
+
+
+    const response =
+      await fetch(url);
+
+
+    let data;
+
+    try{
+      data = await response.json();
+    }
+    catch{
+      throw new Error(
+        "Server returned an invalid response."
+      );
+    }
+
+
+    if(!response.ok){
+
+      throw new Error(
+        data.error ||
+        "Lead search failed."
+      );
+    }
+
+
+    currentBusinesses =
+      data.businesses || [];
+
+
+    if(!currentBusinesses.length){
+
+      status.textContent =
+        "No matching businesses found.";
+
+      return;
+    }
+
+
+    status.innerHTML =
+      'Found <b>' +
+      currentBusinesses.length +
+      '</b> businesses.';
+
+
+    currentBusinesses.forEach(
+      (business,index)=>{
+
+        const item =
+          document.createElement("div");
+
+        item.className =
+          "lead";
+
+
+        item.innerHTML = `
+
+<label>
+
+<input
+  type="checkbox"
+  data-index="${index}"
+  checked
+>
+
+<b>
+${escapeHTML(
+  business.business_name || "Unnamed Business"
+)}
+</b>
+
+</label>
+
+<div class="muted">
+
+${
+  business.category
+    ? "Category: " +
+      escapeHTML(business.category)
+    : ""
+}
+
+${
+  business.phone
+    ? " • " +
+      escapeHTML(business.phone)
+    : ""
+}
+
+${
+  business.email
+    ? " • " +
+      escapeHTML(business.email)
+    : ""
+}
+
+${
+  business.website
+    ? " • " +
+      escapeHTML(business.website)
+    : ""
+}
+
+</div>
+
 `;
 
-    const servers = [
-      "https://overpass.kumi.systems/api/interpreter",
-      "https://overpass.private.coffee/api/interpreter"
+        results.appendChild(item);
+
+      }
+    );
+
+
+    const saveButton =
+      document.createElement("button");
+
+
+    saveButton.textContent =
+      "Save Selected Leads to Supabase";
+
+
+    saveButton.onclick =
+      saveSelectedLeads;
+
+
+    results.appendChild(
+      saveButton
+    );
+
+
+  }
+  catch(error){
+
+    console.error(error);
+
+
+    status.innerHTML =
+      '<span class="error">' +
+      'Error: ' +
+      escapeHTML(error.message) +
+      '</span>';
+
+  }
+  finally{
+
+    findButton.disabled = false;
+
+  }
+
+}
+
+
+
+async function saveSelectedLeads(){
+
+  const checked =
+    [
+      ...document.querySelectorAll(
+        'input[type="checkbox"][data-index]:checked'
+      )
     ];
 
-    let data = null;
 
-    for (const server of servers) {
-      try {
-        const response = await fetch(server, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "AI-Lead-Finder/1.0"
-          },
-          body: "data=" + encodeURIComponent(query)
-        });
+  if(!checked.length){
 
-        if (response.ok) {
-          data = await response.json();
-          break;
-        }
-      } catch (e) {}
-    }
+    alert(
+      "Select at least one lead."
+    );
 
-    if (!data) {
-      throw new Error("Business search service unavailable");
-    }
-
-    const businesses = (data.elements || [])
-      .map((item) => {
-        const tags = item.tags || {};
-
-        return {
-          business_name: tags.name || "",
-          category:
-            tags.shop ||
-            tags.amenity ||
-            tags.office ||
-            category ||
-            "",
-          city,
-          phone: tags.phone || tags["contact:phone"] || "",
-          email: tags.email || tags["contact:email"] || "",
-          website: tags.website || tags["contact:website"] || "",
-          instagram: tags["contact:instagram"] || "",
-          website_status:
-            tags.website || tags["contact:website"]
-              ? "has_website"
-              : "unknown",
-          lead_status: "new",
-          notes: "Discovered via OpenStreetMap"
-        };
-      })
-      .filter((business) => {
-        if (!business.business_name) return false;
-        if (!category) return true;
-
-        const text = (
-          business.business_name +
-          " " +
-          business.category
-        ).toLowerCase();
-
-        return text.includes(category);
-      })
-      .slice(0, limit);
-
-    return res.status(200).json({
-      city,
-      category,
-      count: businesses.length,
-      businesses
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      error: error.message || "Lead search failed"
-    });
+    return;
   }
+
+
+  const selected =
+    checked.map(
+      checkbox =>
+        currentBusinesses[
+          Number(
+            checkbox.dataset.index
+          )
+        ]
+    );
+
+
+  const payload =
+    selected.map(
+      business => ({
+
+        business_name:
+          business.business_name || "",
+
+        category:
+          business.category || "",
+
+        city:
+          business.city || "",
+
+        phone:
+          business.phone || "",
+
+        email:
+          business.email || "",
+
+        website:
+          business.website || "",
+
+        instagram:
+          business.instagram || "",
+
+        website_status:
+          business.website_status ||
+          "unknown",
+
+        lead_status:
+          "new",
+
+        notes:
+          business.notes ||
+          "Discovered via OpenStreetMap"
+
+      })
+    );
+
+
+  const { error } =
+    await sb
+      .from("Leads")
+      .insert(payload);
+
+
+  if(error){
+
+    alert(
+      "Supabase error: " +
+      error.message
+    );
+
+    console.error(error);
+
+    return;
+  }
+
+
+  alert(
+    payload.length +
+    " lead(s) saved successfully."
+  );
+
 }
+
+
+
+function escapeHTML(value){
+
+  return String(
+    value ?? ""
+  )
+  .replace(
+    /[&<>"']/g,
+    char => ({
+
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+
+    }[char])
+  );
+
+}
+
+</script>
+
+</body>
+</html>
