@@ -8,7 +8,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "City is required" });
     }
 
-    // 1. Find city coordinates
     const geoURL =
       "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
       encodeURIComponent(city);
@@ -32,7 +31,6 @@ export default async function handler(req, res) {
     const lat = Number(geo[0].lat);
     const lon = Number(geo[0].lon);
 
-    // 2. Search businesses
     const query = `
 [out:json][timeout:25];
 (
@@ -70,7 +68,6 @@ out center tags;
       throw new Error("Business search service unavailable");
     }
 
-    // 3. Format and filter results
     const businesses = (data.elements || [])
       .map((item) => {
         const tags = item.tags || {};
@@ -98,7 +95,6 @@ out center tags;
       })
       .filter((business) => {
         if (!business.business_name) return false;
-
         if (!category) return true;
 
         const text = (
