@@ -4,381 +4,487 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI Lead Finder</title>
+
 <style>
-body{font-family:system-ui,sans-serif;background:#0b1020;color:#eef2ff;margin:0;padding:24px}
-.wrap{max-width:1000px;margin:auto}
-.card{background:#151c32;border:1px solid #2b3555;border-radius:18px;padding:20px;margin:16px 0}
-h1{margin:0 0 8px}
-p,.muted{color:#aeb8d4}
-input,button{padding:12px;border-radius:10px;border:1px solid #394563;background:#0d1427;color:white;margin:5px}
-button{cursor:pointer;background:#635bff;border:0}
-.lead{padding:14px 0;border-top:1px solid #2b3555}
+body{
+  font-family:system-ui,sans-serif;
+  background:#0b1020;
+  color:#eef2ff;
+  margin:0;
+  padding:24px;
+}
+
+.wrap{
+  max-width:1000px;
+  margin:auto;
+}
+
+.card{
+  background:#151c32;
+  border:1px solid #2b3555;
+  border-radius:18px;
+  padding:20px;
+  margin:16px 0;
+}
+
+h1{
+  margin:0 0 8px;
+}
+
+p,.muted{
+  color:#aeb8d4;
+}
+
+input,button{
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #394563;
+  background:#0d1427;
+  color:white;
+  margin:5px;
+}
+
+button{
+  cursor:pointer;
+  background:#635bff;
+  border:0;
+}
+
+button:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+.lead{
+  padding:14px 0;
+  border-top:1px solid #2b3555;
+}
+
+.error{
+  color:#ff8d8d;
+}
+
+.success{
+  color:#7ee2a8;
+}
 </style>
 </head>
 
 <body>
+
 <div class="wrap">
 
 <div class="card">
+
 <h1>🤖 AI Lead Finder</h1>
-<p>Find local businesses and save prospects to your Supabase lead database.</p>
 
-<input id="city" value="Dehradun" placeholder="City">
-<input id="category" value="clothes" placeholder="Business type">
-<input id="limit" type="number" value="20" min="1" max="50">
+<p>
+Find local businesses and save prospects to your Supabase lead database.
+</p>
 
-<button onclick="findBusinesses()">Find Businesses</button>
+<input
+  id="city"
+  value="Dehradun"
+  placeholder="City"
+>
+
+<input
+  id="category"
+  value="clothes"
+  placeholder="Business type"
+>
+
+<input
+  id="limit"
+  type="number"
+  value="20"
+  min="1"
+  max="50"
+>
+
+<button
+  id="findButton"
+  onclick="findBusinesses()"
+>
+Find Businesses
+</button>
+
 </div>
+
 
 <div class="card">
-<div id="status">No search yet.</div>
+
+<div id="status">
+No search yet.
+</div>
+
 <div id="results"></div>
+
 </div>
 
 </div>
+
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+
 const SUPABASE_URL =
 "https://nfewbdpohfukwmlhpigi.supabase.co";
 
+/*
+IMPORTANT:
+Keep your existing Supabase PUBLISHABLE/ANON key here.
+Do NOT use a service-role key.
+*/
 const SUPABASE_ANON_KEY =
-"sb_publishable_JDVxhynBMwqe-Fu4mQO4RQ_ZBEC9jss";
-
-const sb = window.supabase.createClient(
-SUPABASE_URL,
-SUPABASE_ANON_KEY
+"sb_publishable_JDVxhynBMwqe-Fu4mQO4RQ_ZBEC9jss" const sb =
+window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
 );
 
-async function geocode(city){
 
-const url =
-"https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
-+ encodeURIComponent(city);
+let currentBusinesses = [];
 
-const response = await fetch(url);
-
-if(!response.ok)
-throw new Error("Location service unavailable");
-
-const data = await response.json();
-
-if(!data.length)
-throw new Error("City not found");
-
-return data[0];
-}
-
-async function overpassRequest(query){
-
-const servers = [
-"https://overpass-api.de/api/interpreter",
-"https://overpass.kumi.systems/api/interpreter",
-"https://overpass.private.coffee/api/interpreter"
-];
-
-let lastError = "All search servers failed";
-
-for(const server of servers){
-
-try{
-
-const response = await fetch(server,{
-method:"POST",
-headers:{
-"Content-Type":"application/x-www-form-urlencoded"
-},
-body:"data="+encodeURIComponent(query)
-});
-
-if(response.ok){
-
-const data = await response.json();
-
-if(data.elements)
-return data;
-}
-
-}catch(e){
-
-lastError = e.message || lastError;
-
-}
-
-}
-
-throw new Error(
-"Business search service unavailable. Please try again in a moment."
-);
-}
 
 async function findBusinesses(){
 
-const city =
-document.getElementById("city").value.trim();
+  const city =
+    document
+      .getElementById("city")
+      .value
+      .trim();
 
-const category =
-document.getElementById("category").value.trim().toLowerCase();
+  const category =
+    document
+      .getElementById("category")
+      .value
+      .trim();
 
-const limit =
-Math.min(
-50,
-Math.max(
-1,
-Number(document.getElementById("limit").value)||20
-)
-);
+  const limit =
+    Math.min(
+      50,
+      Math.max(
+        1,
+        Number(
+          document
+            .getElementById("limit")
+            .value
+        ) || 20
+      )
+    );
 
-const status =
-document.getElementById("status");
 
-const results =
-document.getElementById("results");
+  const status =
+    document.getElementById("status");
 
-status.textContent="Finding businesses...";
-results.innerHTML="";
+  const results =
+    document.getElementById("results");
 
-try{
+  const findButton =
+    document.getElementById("findButton");
 
-const location = await geocode(city);
 
-const lat = Number(location.lat);
-const lon = Number(location.lon);
+  if(!city){
 
-const radius = 15000;
+    status.innerHTML =
+      '<span class="error">Please enter a city.</span>';
 
-const query = `
-[out:json][timeout:30];
+    return;
+  }
 
-(
-nwr["name"](around:${radius},${lat},${lon});
-);
 
-out center tags;
-`;
+  status.textContent =
+    "Finding businesses...";
 
-const data =
-await overpassRequest(query);
+  results.innerHTML = "";
 
-let businesses =
-data.elements
-.map(element=>{
+  findButton.disabled = true;
 
-const tags =
-element.tags || {};
 
-const name =
-tags.name || "";
+  try{
 
-const searchable =
-(
-name+" "+
-(tags.shop||"")+" "+
-(tags.amenity||"")+" "+
-(tags.cuisine||"")+" "+
-(tags.description||"")
-).toLowerCase();
+    const url =
+      "/api/leads?city=" +
+      encodeURIComponent(city) +
+      "&category=" +
+      encodeURIComponent(category) +
+      "&limit=" +
+      encodeURIComponent(limit);
 
-return{
-name,
-tags,
-searchable
-};
 
-})
-.filter(x=>{
+    const response =
+      await fetch(url);
 
-if(!x.name) return false;
 
-if(!category) return true;
+    let data;
 
-return x.searchable.includes(category);
+    try{
+      data = await response.json();
+    }
+    catch{
+      throw new Error(
+        "Server returned an invalid response."
+      );
+    }
 
-})
-.slice(0,limit);
 
-if(!businesses.length){
+    if(!response.ok){
 
-status.textContent =
-"No matching businesses found. Try another category.";
+      throw new Error(
+        data.error ||
+        "Lead search failed."
+      );
+    }
 
-return;
-}
 
-status.innerHTML =
-"Found <b>"+businesses.length+
-"</b> businesses.";
+    currentBusinesses =
+      data.businesses || [];
 
-businesses.forEach((business,index)=>{
 
-const tags =
-business.tags;
+    if(!currentBusinesses.length){
 
-const phone =
-tags.phone ||
-tags["contact:phone"] ||
-"";
+      status.textContent =
+        "No matching businesses found.";
 
-const email =
-tags.email ||
-tags["contact:email"] ||
-"";
+      return;
+    }
 
-const website =
-tags.website ||
-tags["contact:website"] ||
-"";
 
-const instagram =
-tags["contact:instagram"] ||
-"";
+    status.innerHTML =
+      'Found <b>' +
+      currentBusinesses.length +
+      '</b> businesses.';
 
-const item =
-document.createElement("div");
 
-item.className="lead";
+    currentBusinesses.forEach(
+      (business,index)=>{
 
-item.innerHTML=`
+        const item =
+          document.createElement("div");
+
+        item.className =
+          "lead";
+
+
+        item.innerHTML = `
 
 <label>
 
 <input
-type="checkbox"
-data-index="${index}"
-checked
+  type="checkbox"
+  data-index="${index}"
+  checked
 >
 
-<b>${escapeHTML(business.name)}</b>
+<b>
+${escapeHTML(
+  business.business_name || "Unnamed Business"
+)}
+</b>
 
 </label>
 
 <div class="muted">
 
-${escapeHTML(phone)}
+${
+  business.category
+    ? "Category: " +
+      escapeHTML(business.category)
+    : ""
+}
 
-${email ? " • "+escapeHTML(email) : ""}
+${
+  business.phone
+    ? " • " +
+      escapeHTML(business.phone)
+    : ""
+}
 
-${website ? " • "+escapeHTML(website) : ""}
+${
+  business.email
+    ? " • " +
+      escapeHTML(business.email)
+    : ""
+}
+
+${
+  business.website
+    ? " • " +
+      escapeHTML(business.website)
+    : ""
+}
 
 </div>
+
 `;
 
-results.appendChild(item);
+        results.appendChild(item);
 
-business.save={
+      }
+    );
 
-business_name:business.name,
 
-category:
-tags.shop ||
-tags.amenity ||
-category,
+    const saveButton =
+      document.createElement("button");
 
-city:city,
 
-phone:phone,
+    saveButton.textContent =
+      "Save Selected Leads to Supabase";
 
-email:email,
 
-website:website,
+    saveButton.onclick =
+      saveSelectedLeads;
 
-instagram:instagram,
 
-website_status:
-website ?
-"has_website" :
-"unknown",
+    results.appendChild(
+      saveButton
+    );
 
-lead_status:"new",
 
-notes:
-"Discovered via OpenStreetMap"
+  }
+  catch(error){
 
-};
+    console.error(error);
 
-});
 
-const saveButton =
-document.createElement("button");
+    status.innerHTML =
+      '<span class="error">' +
+      'Error: ' +
+      escapeHTML(error.message) +
+      '</span>';
 
-saveButton.textContent =
-"Save Selected Leads to Supabase";
+  }
+  finally{
 
-saveButton.onclick =
-()=>saveLeads(businesses);
+    findButton.disabled = false;
 
-results.appendChild(saveButton);
-
-}catch(error){
-
-console.error(error);
-
-status.textContent =
-"Error: "+error.message;
+  }
 
 }
 
+
+
+async function saveSelectedLeads(){
+
+  const checked =
+    [
+      ...document.querySelectorAll(
+        'input[type="checkbox"][data-index]:checked'
+      )
+    ];
+
+
+  if(!checked.length){
+
+    alert(
+      "Select at least one lead."
+    );
+
+    return;
+  }
+
+
+  const selected =
+    checked.map(
+      checkbox =>
+        currentBusinesses[
+          Number(
+            checkbox.dataset.index
+          )
+        ]
+    );
+
+
+  const payload =
+    selected.map(
+      business => ({
+
+        business_name:
+          business.business_name || "",
+
+        category:
+          business.category || "",
+
+        city:
+          business.city || "",
+
+        phone:
+          business.phone || "",
+
+        email:
+          business.email || "",
+
+        website:
+          business.website || "",
+
+        instagram:
+          business.instagram || "",
+
+        website_status:
+          business.website_status ||
+          "unknown",
+
+        lead_status:
+          "new",
+
+        notes:
+          business.notes ||
+          "Discovered via OpenStreetMap"
+
+      })
+    );
+
+
+  const { error } =
+    await sb
+      .from("Leads")
+      .insert(payload);
+
+
+  if(error){
+
+    alert(
+      "Supabase error: " +
+      error.message
+    );
+
+    console.error(error);
+
+    return;
+  }
+
+
+  alert(
+    payload.length +
+    " lead(s) saved successfully."
+  );
+
 }
 
-async function saveLeads(businesses){
 
-const selected =
-[
-...document.querySelectorAll(
-'input[type="checkbox"][data-index]:checked'
-)
-]
-.map(
-checkbox =>
-businesses[
-Number(checkbox.dataset.index)
-].save
-);
-
-if(!selected.length){
-
-alert("Select at least one lead.");
-
-return;
-}
-
-const {error} =
-await sb
-.from("Leads")
-.insert(selected);
-
-if(error){
-
-alert(
-"Supabase error: "+
-error.message
-);
-
-return;
-}
-
-alert(
-selected.length+
-" lead(s) saved successfully."
-);
-
-}
 
 function escapeHTML(value){
 
-return String(value ?? "")
-.replace(/[&<>"']/g,char=>({
+  return String(
+    value ?? ""
+  )
+  .replace(
+    /[&<>"']/g,
+    char => ({
 
-"&":"&amp;",
-"<":"&lt;",
-">":"&gt;",
-'"':"&quot;",
-"'":"&#39;"
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
 
-}[char]));
+    }[char])
+  );
 
 }
+
 </script>
 
 </body>
