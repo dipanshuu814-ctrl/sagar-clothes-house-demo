@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+// Lead Finder API export default async function handler(req, res) {
   try {
     const city = String(req.query.city || "").trim();
     const category = String(req.query.category || "").trim().toLowerCase();
