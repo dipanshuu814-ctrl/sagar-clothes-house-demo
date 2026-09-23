@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sagar Clothes House — Admin</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f1e8;
+      color: #3d171c;
+    }
+
+    header {
+      background: #681c28;
+      color: white;
+      padding: 18px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .logout {
+      background: white;
+      color: #681c28;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 25px 16px 50px;
+    }
+
+    .login,
+    .panel {
+      background: white;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.07);
+      margin-bottom: 20px;
+    }
+
+    .login {
+      max-width: 430px;
+      margin: 70px auto;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      margin: 7px 0 14px;
+      font-size: 15px;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .primary {
+      background: #681c28;
+      color: white;
+      width: 100%;
+    }
+
+    .message {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 7px;
+      display: none;
+    }
+
+    .product {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      border: 1px solid #eee;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    .product img {
+      width: 90px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #eee;
+    }
+
+    .product-info {
+      flex: 1;
+    }
+
+    .product-info h3 {
+      margin: 0 0 5px;
+    }
+
+    .product-info p {
+      margin: 4px 0;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .edit {
+      background: #eee;
+      color: #333;
+    }
+
+    .delete {
+      background: #681c28;
+      color: white;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .stock {
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .available {
+      color: green;
+    }
+
+    .out {
+      color: #b00020;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Sagar Clothes House — Admin</h1>
+  <button id="logoutBtn" class="logout hidden">Logout</button>
+</header>
+
+<div class="container">
+
+  <!-- LOGIN -->
+  <div id="loginBox" class="login">
+    <h2>Admin Login</h2>
+
+    <label>Email</label>
+    <input id="email" type="email" placeholder="Admin email">
+
+    <label>Password</label>
+    <input id="password" type="password" placeholder="Password">
+
+    <button id="loginBtn" class="primary">Login</button>
+
+    <div id="loginMessage" class="message"></div>
+  </div>
+
+  <!-- ADMIN -->
+  <div id="adminPanel" class="hidden">
+
+    <div class="panel">
+      <h2 id="formTitle">Add Product</h2>
+
+      <input id="productName" placeholder="Product name">
+
+      <input id="price" type="number" placeholder="Price ₹">
+
+      <select id="category">
+        <option value="">Select category</option>
+        <option value="Sarees">Sarees</option>
+        <option value="Suits">Suits</option>
+        <option value="Readymade">Readymade</option>
+        <option value="Lehengas">Lehengas</option>
+        <option value="Menswear">Menswear</option>
+        <option value="Kidswear">Kidswear</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <textarea id="description" placeholder="Product description"></textarea>
+
+      <label>Product Image</label>
+      <input id="imageFile" type="file" accept="image/*">
+
+      <label>
+        <input id="stock" type="checkbox" checked style="width:auto;">
+        In stock
+      </label>
+
+      <br><br>
+
+      <button id="saveBtn" class="primary">Add Product</button>
+
+      <button id="cancelBtn"
+              class="hidden"
+              style="width:100%; margin-top:8px; background:#eee;">
+        Cancel Edit
+      </button>
+
+      <div id="formMessage" class="message"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Products</h2>
+      <div id="productsList">Loading products...</div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+const SUPABASE_URL =
+  "https://nfewbdpohfukwmlhpigi.supabase.co";
+
+const SUPABASE_ANON_KEY =
+  "PASTE_YOUR_ANON_KEY_HERE";
+
+const supabaseClient =
+  supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+let editingId = null;
+let currentImageUrl = null;
+
+
+/* ---------- UI ---------- */
+
+function showMessage(element, message, success = false) {
+  element.textContent = message;
+  element.style.display = "block";
+  element.style.background = success ? "#e8f7ed" : "#fde8e8";
+  element.style.color = success ? "#176b35" : "#a00000";
+}
+
+
+/* ---------- LOGIN ---------- */
+
+document.getElementById("loginBtn").addEventListener("click", async () => {
+
+  const email =
+    document.getElementById("email").value.trim();
+
+  const password =
+    document.getElementById("password").value;
+
+  const message =
+    document.getElementById("loginMessage");
+
+  if (!email || !password) {
+    showMessage(message, "Email aur password enter karo.");
+    return;
+  }
+
+  const { error } =
+    await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+
+  if (error) {
+    showMessage(message, error.message);
+    return;
+  }
+
+  showAdmin();
+});
+
+
+/* ---------- LOGOUT ---------- */
+
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+
+  await supabaseClient.auth.signOut();
+
+  document.getElementById("adminPanel")
+    .classList.add("hidden");
+
+  document.getElementById("loginBox")
+    .classList.remove("hidden");
+
+  document.getElementById("logoutBtn")
+    .classList.add("hidden");
+});
+
+
+/* ---------- SESSION ---------- */
+
+async function checkSession() {
+
+  const { data } =
+    await supabaseClient.auth.getSession();
+
+  if (data.session) {
+    showAdmin();
+  }
+}
+
+
+/* ---------- SHOW ADMIN ---------- */
+
+function showAdmin() {
+
+  document.getElementById("loginBox")
+    .classList.add("hidden");
+
+  document.getElementById("adminPanel")
+    .classList.remove("hidden");
+
+  document.getElementById("logoutBtn")
+    .classList.remove("hidden");
+
+  loadProducts();
+}
+
+
+/* ---------- LOAD PRODUCTS ---------- */
+
+async function loadProducts() {
+
+  const list =
+    document.getElementById("productsList");
+
+  list.innerHTML = "Loading products...";
+
+  const { data, error } =
+    await supabaseClient
+      .from("products")
+      .select("*")
+      .order("created_at", {
+        ascending: false
+      });
+
+  if (error) {
+    list.innerHTML =
+      "<p>Products load nahi ho paaye.</p>";
+    console.error(error);
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    list.innerHTML =
+      "<p>Abhi koi product add nahi hua.</p>";
+    return;
+  }
+
+  list.innerHTML = "";
+
+  data.forEach(product => {
+
+    const div =
+      document.createElement("div");
+
+    div.className = "product";
+
+    div.innerHTML = `
+      ${
+        product.image_url
+        ? `<img src="${escapeHtml(product.image_url)}">`
+        : `<div style="width:90px;height:100px;background:#eee;border-radius:8px;"></div>`
+      }
+
+      <div class="product-info">
+
+        <h3>${escapeHtml(product.name)}</h3>
+
+        <p>
+          ₹${product.price ?? ""}
+          • ${escapeHtml(product.category ?? "")}
+        </p>
+
+        <p>
+          ${escapeHtml(product.description ?? "")}
+        </p>
+
+        <div class="stock ${
+          product.stock
+          ? "available"
+          : "out"
+        }">
+          ${product.stock ? "IN STOCK" : "OUT OF STOCK"}
+        </div>
+
+      </div>
+
+      <div class="actions">
+
+        <button class="edit"
+          onclick="editProduct('${product.id}')">
+          Edit
+        </button>
+
+        <button class="delete"
+          onclick="deleteProduct('${product.id}')">
+          Delete
+        </button>
+
+      </div>
+    `;
+
+    list.appendChild(div);
+  });
+}
+
+
+/* ---------- ADD / UPDATE ---------- */
+
+document.getElementById("saveBtn")
+  .addEventListener("click", saveProduct);
+
+
+async function saveProduct() {
+
+  const name =
+    document.getElementById("productName")
+      .value.trim();
+
+  const price =
+    document.getElementById("price")
+      .value;
+
+  const category =
+    document.getElementById("category")
+      .value;
+
+  const description =
+    document.getElementById("description")
+      .value.trim();
+
+  const stock =
+    document.getElementById("stock")
+      .checked;
+
+  const file =
+    document.getElementById("imageFile")
+      .files[0];
+
+  const message =
+    document.getElementById("formMessage");
+
+  if (!name) {
+    showMessage(message, "Product name required hai.");
+    return;
+  }
+
+  if (!price) {
+    showMessage(message, "Price required hai.");
+    return;
+  }
+
+  if (!category) {
+    showMessage(message, "Category select karo.");
+    return;
+  }
+
+  let imageUrl = currentImageUrl;
+
+  /* IMAGE UPLOAD */
+
+  if (file) {
+
+    const extension =
+      file.name.split(".").pop();
+
+    const fileName =
+      `${crypto.randomUUID()}.${extension}`;
+
+    const filePath =
+      `products/${fileName}`;
+
+    const { error: uploadError } =
+      await supabaseClient.storage
+        .from("product-images")
+        .upload(filePath, file);
+
+    if (uploadError) {
+      showMessage(
+        message,
+        "Image upload failed: " +
+        uploadError.message
+      );
+      return;
+    }
+
+    const { data } =
+      supabaseClient.storage
+        .from("product-images")
+        .getPublicUrl(filePath);
+
+    imageUrl = data.publicUrl;
+  }
+
+
+  /* UPDATE */
+
+  if (editingId) {
+
+    const { error } =
+      await supabaseClient
+        .from("products")
+        .update({
+          name,
+          price: Number(price),
+          category,
+          description,
+          stock,
+          image_url: imageUrl
+        })
+        .eq("id", editingId);
+
+    if (error) {
+      showMessage(message, error.message);
+      return;
+    }
+
+    showMessage(
+      message,
+      "Product updated successfully.",
+      true
+    );
+
+  }
+
+  /* INSERT */
+
+  else {
+
+    const { error } =
+      await supabaseClient
+        .from("products")
+        .insert({
+          name,
+          price: Number(price),
+          category,
+          description,
+          stock,
+          image_url: imageUrl
+        });
+
+    if (error) {
+      showMessage(message, error.message);
+      return;
+    }
+
+    showMessage(
+      message,
+      "Product added successfully.",
+      true
+    );
+  }
+
+  resetForm();
+  loadProducts();
+}
+
+
+/* ---------- EDIT ---------- */
+
+window.editProduct = async function(id) {
+
+  const { data, error } =
+    await supabaseClient
+      .from("products")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  editingId = id;
+  currentImageUrl = data.image_url;
+
+  document.getElementById("formTitle")
+    .textContent = "Edit Product";
+
+  document.getElementById("saveBtn")
+    .textContent = "Update Product";
+
+  document.getElementById("cancelBtn")
+    .classList.remove("hidden");
+
+  document.getElementById("productName")
+    .value = data.name || "";
+
+  document.getElementById("price")
+    .value = data.price || "";
+
+  document.getElementById("category")
+    .value = data.category || "";
+
+  document.getElementById("description")
+    .value = data.description || "";
+
+  document.getElementById("stock")
+    .checked = data.stock;
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+};
+
+
+/* ---------- DELETE ---------- */
+
+window.deleteProduct = async function(id) {
+
+  const confirmDelete =
+    confirm("Is product ko delete karna hai?");
+
+  if (!confirmDelete) return;
+
+  const { error } =
+    await supabaseClient
+      .from("products")
+      .delete()
+      .eq("id", id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  loadProducts();
+};
+
+
+/* ---------- CANCEL ---------- */
+
+document.getElementById("cancelBtn")
+  .addEventListener("click", resetForm);
+
+
+function resetForm() {
+
+  editingId = null;
+  currentImageUrl = null;
+
+  document.getElementById("formTitle")
+    .textContent = "Add Product";
+
+  document.getElementById("saveBtn")
+    .textContent = "Add Product";
+
+  document.getElementById("cancelBtn")
+    .classList.add("hidden");
+
+  document.getElementById("productName")
+    .value = "";
+
+  document.getElementById("price")
+    .value = "";
+
+  document.getElementById("category")
+    .value = "";
+
+  document.getElementById("description")
+    .value = "";
+
+  document.getElementById("imageFile")
+    .value = "";
+
+  document.getElementById("stock")
+    .checked = true;
+}
+
+
+/* ---------- SECURITY ---------- */
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+checkSession();
+
+</script>
+
+</body>
+</html>
+const eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZXdiZHBvaGZ1a3dtbGhwaWdpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAxNDMwNjgsImV4cCI6MjEwNTcxOTA2OH0.M8Yy_Vr06_Xg5hx7jtM9ro2Yc1iFHNlrIs7g_ZYtd6w =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mZXdiZHBvaGZ1a3dtbGhwaWdpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDE0MzA2OCwiZXhwIjoyMTA1NzE5MDY4fQ.H40_6SD9tANd5SBLEtIDJmd0sXj0WlU71CHpJWEIIw0";
