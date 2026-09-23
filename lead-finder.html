@@ -5,220 +5,378 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI Lead Finder</title>
 <style>
-body{font-family:Inter,system-ui,sans-serif;background:#0b1020;color:#eef2ff;margin:0;padding:24px}
-.wrap{max-width:1000px;margin:auto}.card{background:#151c32;border:1px solid #2b3555;border-radius:18px;padding:20px;margin:16px 0}
-h1{margin:0 0 8px}p{color:#aeb8d4}input,button{padding:12px;border-radius:10px;border:1px solid #394563;background:#0d1427;color:white;margin:5px}
-button{cursor:pointer;background:#635bff;border:0}.muted{color:#8995b5}.row{display:flex;flex-wrap:wrap;gap:6px}.lead{padding:14px 0;border-top:1px solid #2b3555}
+body{font-family:system-ui,sans-serif;background:#0b1020;color:#eef2ff;margin:0;padding:24px}
+.wrap{max-width:1000px;margin:auto}
+.card{background:#151c32;border:1px solid #2b3555;border-radius:18px;padding:20px;margin:16px 0}
+h1{margin:0 0 8px}
+p,.muted{color:#aeb8d4}
+input,button{padding:12px;border-radius:10px;border:1px solid #394563;background:#0d1427;color:white;margin:5px}
+button{cursor:pointer;background:#635bff;border:0}
+.lead{padding:14px 0;border-top:1px solid #2b3555}
 </style>
 </head>
+
 <body>
 <div class="wrap">
+
 <div class="card">
 <h1>🤖 AI Lead Finder</h1>
-<p>Find local businesses and save selected prospects to your Supabase lead database.</p>
+<p>Find local businesses and save prospects to your Supabase lead database.</p>
 
-<div class="row">
 <input id="city" value="Dehradun" placeholder="City">
 <input id="category" value="clothes" placeholder="Business type">
 <input id="limit" type="number" value="20" min="1" max="50">
+
 <button onclick="findBusinesses()">Find Businesses</button>
-</div>
 </div>
 
 <div class="card">
 <div id="status">No search yet.</div>
 <div id="results"></div>
 </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-const SUPABASE_URL="https://nfewbdpohfukwmlhpigi.supabase.co";
-const SUPABASE_ANON_KEY="PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+const SUPABASE_URL =
+"https://nfewbdpohfukwmlhpigi.supabase.co";
 
-const sb=window.supabase.createClient(
+const SUPABASE_ANON_KEY =
+"sb_publishable_JDVxhynBMwqe-Fu4mQO4RQ_ZBEC9jss";
+
+const sb = window.supabase.createClient(
 SUPABASE_URL,
 SUPABASE_ANON_KEY
 );
 
 async function geocode(city){
-const u="https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(city);
-const r=await fetch(u);
-const a=await r.json();
-return a[0];
+
+const url =
+"https://nominatim.openstreetmap.org/search?format=json&limit=1&q="
++ encodeURIComponent(city);
+
+const response = await fetch(url);
+
+if(!response.ok)
+throw new Error("Location service unavailable");
+
+const data = await response.json();
+
+if(!data.length)
+throw new Error("City not found");
+
+return data[0];
+}
+
+async function overpassRequest(query){
+
+const servers = [
+"https://overpass-api.de/api/interpreter",
+"https://overpass.kumi.systems/api/interpreter",
+"https://overpass.private.coffee/api/interpreter"
+];
+
+let lastError = "All search servers failed";
+
+for(const server of servers){
+
+try{
+
+const response = await fetch(server,{
+method:"POST",
+headers:{
+"Content-Type":"application/x-www-form-urlencoded"
+},
+body:"data="+encodeURIComponent(query)
+});
+
+if(response.ok){
+
+const data = await response.json();
+
+if(data.elements)
+return data;
+}
+
+}catch(e){
+
+lastError = e.message || lastError;
+
+}
+
+}
+
+throw new Error(
+"Business search service unavailable. Please try again in a moment."
+);
 }
 
 async function findBusinesses(){
 
-const city=document.getElementById("city").value.trim();
-const category=document.getElementById("category").value.trim();
-const limit=Math.min(50,Math.max(1,+document.getElementById("limit").value||20));
+const city =
+document.getElementById("city").value.trim();
 
-const status=document.getElementById("status");
-const results=document.getElementById("results");
+const category =
+document.getElementById("category").value.trim().toLowerCase();
 
-results.innerHTML="";
+const limit =
+Math.min(
+50,
+Math.max(
+1,
+Number(document.getElementById("limit").value)||20
+)
+);
+
+const status =
+document.getElementById("status");
+
+const results =
+document.getElementById("results");
+
 status.textContent="Finding businesses...";
+results.innerHTML="";
 
 try{
 
-const g=await geocode(city);
+const location = await geocode(city);
 
-if(!g) throw new Error("City not found");
+const lat = Number(location.lat);
+const lon = Number(location.lon);
 
-const lat=+g.lat;
-const lon=+g.lon;
-const radius=15000;
+const radius = 15000;
 
-const q=`[out:json][timeout:25];
-(nwr["shop"](around:${radius},${lat},${lon});
-nwr["amenity"](around:${radius},${lat},${lon}););
-out center tags;`;
+const query = `
+[out:json][timeout:30];
 
-const r=await fetch(
-"https://overpass-api.de/api/interpreter",
-{
-method:"POST",
-body:q
-}
+(
+nwr["name"](around:${radius},${lat},${lon});
 );
 
-const data=await r.json();
+out center tags;
+`;
 
-const needle=category.toLowerCase();
+const data =
+await overpassRequest(query);
 
-const rows=data.elements.map(e=>{
+let businesses =
+data.elements
+.map(element=>{
 
-const t=e.tags||{};
-const name=t.name||"";
+const tags =
+element.tags || {};
 
-const hay=(
+const name =
+tags.name || "";
+
+const searchable =
+(
 name+" "+
-(t.shop||"")+" "+
-(t.amenity||"")+" "+
-(t.cuisine||"")
+(tags.shop||"")+" "+
+(tags.amenity||"")+" "+
+(tags.cuisine||"")+" "+
+(tags.description||"")
 ).toLowerCase();
 
-return {name,hay,t};
+return{
+name,
+tags,
+searchable
+};
 
-}).filter(x=>
-x.name &&
-(!needle || x.hay.includes(needle))
-).slice(0,limit);
+})
+.filter(x=>{
 
-if(!rows.length){
+if(!x.name) return false;
 
-status.textContent=
+if(!category) return true;
+
+return x.searchable.includes(category);
+
+})
+.slice(0,limit);
+
+if(!businesses.length){
+
+status.textContent =
 "No matching businesses found. Try another category.";
 
 return;
 }
 
-status.innerHTML=
-`Found <b>${rows.length}</b> businesses.`;
+status.innerHTML =
+"Found <b>"+businesses.length+
+"</b> businesses.";
 
-rows.forEach((x,i)=>{
+businesses.forEach((business,index)=>{
 
-const t=x.t;
+const tags =
+business.tags;
 
-const website=
-t.website||t["contact:website"]||"";
+const phone =
+tags.phone ||
+tags["contact:phone"] ||
+"";
 
-const phone=
-t.phone||t["contact:phone"]||"";
+const email =
+tags.email ||
+tags["contact:email"] ||
+"";
 
-const email=
-t.email||t["contact:email"]||"";
+const website =
+tags.website ||
+tags["contact:website"] ||
+"";
 
-const div=document.createElement("div");
+const instagram =
+tags["contact:instagram"] ||
+"";
 
-div.className="lead";
+const item =
+document.createElement("div");
 
-div.innerHTML=`
+item.className="lead";
+
+item.innerHTML=`
 
 <label>
-<input type="checkbox" data-i="${i}" checked>
-<b>${esc(x.name)}</b>
+
+<input
+type="checkbox"
+data-index="${index}"
+checked
+>
+
+<b>${escapeHTML(business.name)}</b>
+
 </label>
 
 <div class="muted">
-${esc(phone)}
-${esc(email)}
-${website?esc(website):""}
+
+${escapeHTML(phone)}
+
+${email ? " • "+escapeHTML(email) : ""}
+
+${website ? " • "+escapeHTML(website) : ""}
+
 </div>
 `;
 
-results.appendChild(div);
+results.appendChild(item);
 
-x.save={
-name:x.name,
-category:t.shop||t.amenity||category,
-city,
-phone,
-email,
-website,
-instagram:t["contact:instagram"]||"",
-website_status:website?"has_website":"unknown",
+business.save={
+
+business_name:business.name,
+
+category:
+tags.shop ||
+tags.amenity ||
+category,
+
+city:city,
+
+phone:phone,
+
+email:email,
+
+website:website,
+
+instagram:instagram,
+
+website_status:
+website ?
+"has_website" :
+"unknown",
+
 lead_status:"new",
-notes:"Discovered via OpenStreetMap"
+
+notes:
+"Discovered via OpenStreetMap"
+
 };
 
 });
 
-const b=document.createElement("button");
+const saveButton =
+document.createElement("button");
 
-b.textContent=
+saveButton.textContent =
 "Save Selected Leads to Supabase";
 
-b.onclick=()=>saveRows(rows);
+saveButton.onclick =
+()=>saveLeads(businesses);
 
-results.appendChild(b);
+results.appendChild(saveButton);
 
-}catch(e){
+}catch(error){
 
-status.textContent="Error: "+e.message;
+console.error(error);
+
+status.textContent =
+"Error: "+error.message;
 
 }
+
 }
 
-async function saveRows(rows){
+async function saveLeads(businesses){
 
-const checks=[
+const selected =
+[
 ...document.querySelectorAll(
-'input[type=checkbox][data-i]:checked'
+'input[type="checkbox"][data-index]:checked'
 )
-].map(x=>+x.dataset.i);
+]
+.map(
+checkbox =>
+businesses[
+Number(checkbox.dataset.index)
+].save
+);
 
-const payload=checks.map(i=>rows[i].save);
+if(!selected.length){
 
-if(!payload.length)return;
+alert("Select at least one lead.");
 
-const {error}=await sb
+return;
+}
+
+const {error} =
+await sb
 .from("Leads")
-.insert(payload);
+.insert(selected);
 
 if(error){
 
-alert("Save failed: "+error.message);
+alert(
+"Supabase error: "+
+error.message
+);
+
 return;
+}
+
+alert(
+selected.length+
+" lead(s) saved successfully."
+);
 
 }
 
-alert(payload.length+" lead(s) saved.");
+function escapeHTML(value){
 
-}
+return String(value ?? "")
+.replace(/[&<>"']/g,char=>({
 
-function esc(v){
-
-return String(v??"")
-.replace(/[&<>"']/g,m=>({
 "&":"&amp;",
 "<":"&lt;",
 ">":"&gt;",
 '"':"&quot;",
 "'":"&#39;"
-}[m]));
+
+}[char]));
 
 }
 </script>
