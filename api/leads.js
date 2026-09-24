@@ -1,24 +1,28 @@
-// Lead Finder API export default async function handler(req, res) {
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export default async function handler(req, res) {
   try {
     const city = String(req.query.city || "").trim();
     const category = String(req.query.category || "").trim().toLowerCase();
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
 
     if (!city) {
-      return res.status(400).json({
-        error: "City is required"
-      });
+      return res.status(400).json({ error: "City is required" });
     }
 
-    // 1. City coordinates
+    const started = Date.now();
+
     const geoURL =
       "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" +
       encodeURIComponent(city);
 
     const geoResponse = await fetch(geoURL, {
-      headers: {
-        "User-Agent": "AI-Lead-Finder/1.0"
-      }
+      headers: { "User-Agent": "AI-Lead-Finder/1.0" }
     });
 
     if (!geoResponse.ok) {
@@ -28,15 +32,12 @@
     const geo = await geoResponse.json();
 
     if (!geo.length) {
-      return res.status(404).json({
-        error: "City not found"
-      });
+      return res.status(404).json({ error: "City not found" });
     }
 
     const lat = Number(geo[0].lat);
     const lon = Number(geo[0].lon);
 
-    // 2. Find businesses from OpenStreetMap
     const query = `
 [out:json][timeout:25];
 (
@@ -67,22 +68,19 @@ out center tags;
           data = await response.json();
           break;
         }
-      } catch (error) {
-        // Try next server
-      }
+      } catch {}
     }
 
     if (!data) {
       throw new Error("Business search service unavailable");
     }
 
-    // 3. Convert results
     const businesses = (data.elements || [])
       .map((item) => {
         const tags = item.tags || {};
 
         return {
-          business_name: tags.name || "",
+          name: tags.name || "",
           category:
             tags.shop ||
             tags.amenity ||
@@ -104,50 +102,98 @@ out center tags;
           instagram:
             tags["contact:instagram"] ||
             "",
-          website_status:
-            tags.website ||
-            tags["contact:website"]
-              ? "has_website"
-              : "unknown",
-          lead_status: "new",
-          notes: "Discovered via OpenStreetMap"
+          status: "new",
+          source: "OpenStreetMap"
         };
       })
       .filter((business) => {
+        if (!business.name) return false;
 
-        if (!business.business_name) {
-          return false;
-        }
+        if (!category) return true;
 
-        if (!category) {
-          return true;
-        }
-
-        const text = (
-          business.business_name +
-          " " +
-          business.category
-        ).toLowerCase();
-
-        return text.includes(category);
+        return (
+          business.name + " " + business.category
+        )
+          .toLowerCase()
+          .includes(category);
       })
       .slice(0, limit);
 
-    // 4. Return results
+    if (!businesses.length) {
+      return res.status(200).json({
+        success: true,
+        city,
+        category,
+        count: 0,
+        businesses: []
+      });
+    }
+
+    const { data: savedBusinesses, error: businessError } =
+      await supabase
+        .from("businesses")
+        .insert(businesses)
+        .select();
+
+    if (businessError) {
+      throw new Error(businessError.message);
+    }
+
+    const leads = savedBusinesses.map((b) => ({
+      business_name: b.name,
+      category: b.category,
+      city: b.city,
+      Phone: b.phone,
+      email: b.email,
+      Website: b.website,
+      instagram: b.instagram,
+      website_status: b.website
+        ? "has_website"
+        : "no_website",
+      leads_status: "new",
+      notes: "Discovered via AI Lead Finder"
+    }));
+
+    const { error: leadError } = await supabase
+      .from("Leads")
+      .insert(leads);
+
+    if (leadError) {
+      throw new Error(leadError.message);
+    }
+
+    const { error: runError } = await supabase
+      .from("agent_runs")
+      .insert({
+        agent_name: "Business Finder",
+        run_type: "lead_discovery",
+        status: "completed",
+        input_data: {
+          city,
+          category,
+          limit
+        },
+        output_data: {
+          count: savedBusinesses.length
+        },
+        duration_ms: Date.now() - started
+      });
+
+    if (runError) {
+      throw new Error(runError.message);
+    }
+
     return res.status(200).json({
+      success: true,
       city,
       category,
-      count: businesses.length,
-      businesses
+      count: savedBusinesses.length,
+      businesses: savedBusinesses
     });
 
   } catch (error) {
-
     return res.status(500).json({
-      error:
-        error.message ||
-        "Lead search failed"
+      error: error.message || "Lead search failed"
     });
-
   }
-} 
+}
